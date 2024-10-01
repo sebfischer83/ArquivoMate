@@ -1,0 +1,35 @@
+volumes:
+  rabbitdata:
+    driver: local
+  rabbitlog:
+    driver: local
+  upload:
+    driver: local
+  working:
+    driver: local
+
+services:
+  webapi:
+    image: ${DOCKER_REGISTRY-}webapi
+    build:
+      context: .
+      dockerfile: src/WebApi/Dockerfile
+
+  rabbitmq:
+    image: masstransit/rabbitmq:3.13.1
+    container_name: 'rabbitmq'
+    ports:
+        - 5672:5672
+        - 15672:15672
+    volumes:
+        - rabbitdata:/var/lib/rabbitmq/
+        - rabbitlog:/var/log/rabbitmq
+
+  ocrmypdf-server:
+    image: sebfischer83/ocrmypdf-server:latest
+    container_name: 'ocrmypdfserver'
+    ports:
+        - 10100:8080
+    volumes:
+      - upload:/var/upload
+      - working:/var/working
