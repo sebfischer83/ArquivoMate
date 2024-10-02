@@ -8,8 +8,4 @@
     <AssemblyName>ArquivoMate.Domain</AssemblyName>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Entities\" />
-  </ItemGroup>
-
 </Project>

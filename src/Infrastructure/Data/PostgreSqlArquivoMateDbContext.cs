@@ -14,7 +14,7 @@ namespace ArquivoMate.Infrastructure.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite(configuration.GetConnectionString("Sqlite"));
+            optionsBuilder.UseNpgsql(configuration["Database:ConnectionString"]);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)

@@ -7,6 +7,8 @@ volumes:
     driver: local
   working:
     driver: local
+  sql:
+    driver: local
 
 services:
   webapi:
@@ -33,3 +35,27 @@ services:
     volumes:
       - upload:/var/upload
       - working:/var/working
+  
+  tesseract-server:
+    image: hertzg/tesseract-server:latest
+    container_name: "tesseractserver"
+    ports:
+      - 10101:8884
+  
+  gotenberg-server:
+    image: gotenberg/gotenberg:8
+    container_name: gotenbergserver
+    ports:
+      - 10102:3000
+
+  db:
+    image: postgres:16.1
+    container_name: db
+    restart: always
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=lF18xggsdf4325d3z0mmN
+    ports:
+      - 5012:5432
+    volumes:
+      - sql:/var/lib/postgresql/data

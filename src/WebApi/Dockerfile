@@ -2,6 +2,10 @@
 
 # Diese Stufe wird verwendet, wenn sie von VS im Schnellmodus ausgeführt wird (Standardeinstellung für Debugkonfiguration).
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER root
+RUN apt-get -y update
+RUN apt -y install webp
+RUN apt -y install poppler-utils
 USER app
 WORKDIR /app
 EXPOSE 8080
