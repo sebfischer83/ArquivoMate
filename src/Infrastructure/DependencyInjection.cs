@@ -1,9 +1,20 @@
-﻿using ArquivoMate.Application.Document;
+﻿using ArquivoMate.Application.Commands.Document;
+using ArquivoMate.Application.Interfaces;
 using ArquivoMate.Infrastructure.Data;
+using ArquivoMate.Infrastructure.Identity;
+using ArquivoMate.Infrastructure.Services.Consumer;
+using ArquivoMate.Infrastructure.Services.Document;
+using ArquivoMate.Infrastructure.Services.MessageQueue;
+using Blobject.AmazonS3;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using RabbitMQ.Client;
+using System.Text;
 
 namespace ArquivoMate.Infrastructure
 {
@@ -11,6 +22,7 @@ namespace ArquivoMate.Infrastructure
     {
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
+            // ef core
             DatabaseConfigurations databaseConfigurations = new DatabaseConfigurations();
             configuration.GetSection("Database").Bind(databaseConfigurations);
 
@@ -27,31 +39,87 @@ namespace ArquivoMate.Infrastructure
                     break;
             }
 
+            // mediatr
+            services.AddMediatR(config =>
+            {
+                config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+                config.RegisterServicesFromAssembly(typeof(EnqueueDocumentCommand).Assembly);
+            });
+
+            // mass transit
             services.AddMassTransit(x =>
             {
-                x.AddConsumer<DocumentAddedConsumer>(c =>
-                {
-                    c.ConcurrentMessageLimit = 4;
-                });
+                x.AddConsumer<EnqueueDocumentConsumer>();
 
                 x.UsingRabbitMq((context, cfg) =>
                 {
-                    cfg.Host("rabbitmq", "/", c =>
+                    cfg.Host("rabbitmq", "/", h =>
                     {
-                        c.Username("guest");
-                        c.Password("guest");
+                        h.Username("guest");
+                        h.Password("guest");
                     });
 
-                    cfg.ReceiveEndpoint("image-processing-queue", e =>
+                    cfg.ReceiveEndpoint(Constants.RabbitMqQueueName, e =>
                     {
-                        e.ConfigureConsumer<DocumentAddedConsumer>(context);
+                        e.ConfigureConsumer<EnqueueDocumentConsumer>(context);
                     });
                 });
             });
 
+            services.AddScoped<IMessageQueue<EnqueueDocumentCommand>,
+                Services.MessageQueue.MassTransitMessageQueue<EnqueueDocumentCommand>>();
+
+            // polly
+            services.AddHttpClient("ocrmypdf", client =>
+            {
+                client.BaseAddress = new Uri("http://localhost:5000");
+            });
+
+            // signalR
+            services.AddSignalR().AddJsonProtocol();
+
+
+            // services
+            services.AddScoped<IDocumentProcessor, DocumentProcessor>();
+
+            // authentication
+            var appSettings = configuration.GetSection("TokenSettings").Get<TokenSettings>() ?? default!;
+            services.AddSingleton(appSettings);
+
+            services.AddIdentityCore<ApplicationUser>()
+                 .AddRoles<ApplicationRole>()
+                 .AddSignInManager()
+                 .AddEntityFrameworkStores<ArquivoMateDbContext>()
+                 .AddTokenProvider<DataProtectorTokenProvider<ApplicationUser>>("REFRESHTOKENPROVIDER");
+
+            services.Configure<DataProtectionTokenProviderOptions>(options =>
+            {
+                options.TokenLifespan = TimeSpan.FromSeconds(appSettings.RefreshTokenExpireSeconds);
+            });
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    RequireExpirationTime = true,
+                    ValidIssuer = appSettings.Issuer,
+                    ValidAudience = appSettings.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(appSettings.SecretKey)),
+                    ClockSkew = TimeSpan.FromSeconds(0)
+                };
+            });
+            services.AddTransient<UserService>();
+
             return services;
         }
-
     }
 
     public class DatabaseConfigurations
