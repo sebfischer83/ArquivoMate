@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ArquivoMate.WebApi.Controllers.User
 {
+    [AllowAnonymous]
     [ApiController]
     [Route("api/[controller]/[action]")]
     public class UserController(UserService userService) : ControllerBase
@@ -29,9 +30,9 @@ namespace ArquivoMate.WebApi.Controllers.User
             return await _userService.UserRefreshTokenAsync(req);
         }
         [HttpPost]
-        public async Task<AppResponse<bool>> Logout()
+        public async Task<AppResponse<bool>> Logout(UserLogoutRequest userLogout)
         {
-            return await _userService.UserLogoutAsync(User);
+            return await _userService.UserLogoutAsync(userLogout, User);
         }
 
         [HttpPost]

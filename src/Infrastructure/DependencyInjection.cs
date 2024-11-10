@@ -4,16 +4,19 @@ using ArquivoMate.Infrastructure.Data;
 using ArquivoMate.Infrastructure.Identity;
 using ArquivoMate.Infrastructure.Services.Consumer;
 using ArquivoMate.Infrastructure.Services.Document;
+using ArquivoMate.Infrastructure.Services.Files;
 using ArquivoMate.Infrastructure.Services.MessageQueue;
 using Blobject.AmazonS3;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using RabbitMQ.Client;
+using StackExchange.Redis;
 using System.Text;
 
 namespace ArquivoMate.Infrastructure
@@ -22,6 +25,9 @@ namespace ArquivoMate.Infrastructure
     {
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
+            // file provider
+            services.AddSingleton<FileProviderSettingsFactory>();
+                       
             // ef core
             DatabaseConfigurations databaseConfigurations = new DatabaseConfigurations();
             configuration.GetSection("Database").Bind(databaseConfigurations);
@@ -117,6 +123,11 @@ namespace ArquivoMate.Infrastructure
                 };
             });
             services.AddTransient<UserService>();
+
+            // redis
+            string redisServer = configuration["Cache:RedisServer"]!;
+            string redisPort = configuration["Cache:RedisPort"]!;
+            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redisServer}:{redisPort}"));
 
             return services;
         }

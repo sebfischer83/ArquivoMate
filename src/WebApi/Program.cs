@@ -3,9 +3,13 @@ using ArquivoMate.Infrastructure;
 using ArquivoMate.Infrastructure.Data;
 using ArquivoMate.Infrastructure.Identity;
 using ArquivoMate.Infrastructure.Services.Communication;
+using ArquivoMate.Infrastructure.Services.Files;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Serilog;
 
 namespace ArquivoMate.WebApi
 {
@@ -14,6 +18,9 @@ namespace ArquivoMate.WebApi
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Configuration.AddEnvironmentVariables("AMate__");
+            builder.Host.UseSerilog((context, configuration) =>
+                configuration.ReadFrom.Configuration(context.Configuration));
 
             builder.Services.AddInfrastructureServices(builder.Configuration);
 
@@ -21,9 +28,16 @@ namespace ArquivoMate.WebApi
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+            //builder.Services.AddAuthorization(options =>
+            //{
+            //    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            //        .RequireAuthenticatedUser()
+            //        .Build();
+            //});
 
             var app = builder.Build();
-            //app.MapIdentityApi<ApplicationUser>();
+            app.UseMiddleware<CheckTokenMiddleware>();
+            FileProviderSettingsFactory fileProviderSettingsFactory;
 
             using (var scope = app.Services.CreateScope())
             {
@@ -31,6 +45,7 @@ namespace ArquivoMate.WebApi
                 try
                 {
                     var context = services.GetRequiredService<ArquivoMateDbContext>();
+                    fileProviderSettingsFactory = services.GetRequiredService<FileProviderSettingsFactory>();
 
                     context.Database.Migrate();
                     await CreateRolesAndAdminUser(services);
@@ -55,7 +70,27 @@ namespace ArquivoMate.WebApi
 
             app.UseHttpsRedirection();
 
+            if (fileProviderSettingsFactory.GetFileProviderSettings().Type == FileProviderType.Local)
+            {
+                app.UseStaticFiles();
+            }
+            app.UseSerilogRequestLogging();
+            app.UseAuthentication();
             app.UseAuthorization();
+
+            if (fileProviderSettingsFactory.GetFileProviderSettings().Type == FileProviderType.Local)
+            {
+                var fileProviderSettings = fileProviderSettingsFactory.GetFileProviderSettings() as LocalFileProviderSettings;
+                if (fileProviderSettings == null)
+                {
+                    throw new InvalidOperationException("FileProvider settings are not configured.");
+                }
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new PhysicalFileProvider(fileProviderSettings.Path),
+                    RequestPath = fileProviderSettings.RequestPath
+                });
+            }
 
             app.MapControllers();
             app.MapHub<DocumentStatusHub>("/documentStatus", opt =>

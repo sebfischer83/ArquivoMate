@@ -4,7 +4,14 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "webapi": "StartDebugging"
+        "webapi": "StartDebugging",
+        "db": "StartWithoutDebugging",
+        "gotenberg-server": "StartWithoutDebugging",
+        "ocrmypdf-server": "StartWithoutDebugging",
+        "pgadmin": "StartWithoutDebugging",
+        "rabbitmq": "StartWithoutDebugging",
+        "redis": "StartWithoutDebugging",
+        "tesseract-server": "StartWithoutDebugging"
       }
     }
   }

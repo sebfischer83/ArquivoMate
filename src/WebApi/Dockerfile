@@ -6,7 +6,7 @@ USER root
 RUN apt-get -y update
 RUN apt -y install webp
 RUN apt -y install poppler-utils
-USER app
+# USER app
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081

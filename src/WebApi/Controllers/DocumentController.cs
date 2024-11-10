@@ -1,11 +1,13 @@
 ﻿using ArquivoMate.Application.Commands.Document;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ArquivoMate.WebApi.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Authorize]
+    [Route("api/[controller]/[action]")]
     public class DocumentController : ControllerBase
     {
         private readonly ILogger<DocumentController> logger;
@@ -30,11 +32,19 @@ namespace ArquivoMate.WebApi.Controllers
                 fileBytes = memoryStream.ToArray();
             }
 
+            var documentId = Guid.NewGuid();
+            var tempPath = Path.Combine(Path.GetTempPath(), documentId.ToString());
+            Path.ChangeExtension(tempPath, Path.GetExtension(file.FileName));
+            System.IO.File.WriteAllBytes(tempPath, fileBytes);
+
+            tempPath = Path.Combine("/var/storage", "test.png");
+            System.IO.File.WriteAllBytes(tempPath, fileBytes);
+
             EnqueueDocumentCommand command = new EnqueueDocumentCommand
             {
-                DocumentId = Guid.NewGuid(),
+                DocumentId = documentId,
                 DocumentName = file.FileName,
-                DocumentPath = ""
+                DocumentPath = tempPath
             };
 
             await mediator.Send(command);
