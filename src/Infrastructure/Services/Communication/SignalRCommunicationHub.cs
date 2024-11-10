@@ -1,4 +1,5 @@
-﻿using ArquivoMate.Application.Interfaces;
+﻿using ArquivoMate.Application;
+using ArquivoMate.Application.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System;
@@ -9,16 +10,16 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Services.Communication
 {
-    public class DocumentStatusHub : Hub, ICommunicationHub
+    public class SignalRCommunicationHub : Hub, ICommunicationHub
     {
-        private readonly ILogger<DocumentStatusHub> logger;
+        private readonly ILogger<SignalRCommunicationHub> logger;
 
-        public DocumentStatusHub(ILogger<DocumentStatusHub> logger)
+        public SignalRCommunicationHub(ILogger<SignalRCommunicationHub> logger)
         {
             this.logger = logger;
         }
 
-        public async Task SendDocumentStatus(string connectionId, string documentId, string status)
+        public async Task SendDocumentStatus(string connectionId, string documentId, HubResponse<HubResponseProgressData> status)
         {
             await Clients.All.SendAsync("DocumentStatus", documentId, status);
         }

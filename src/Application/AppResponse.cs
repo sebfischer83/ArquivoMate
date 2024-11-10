@@ -3,9 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ArquivoMate.Application
 {
+    public class HubResponse<T>
+    {
+        public bool IsSucceed { get; private set; } = true;
+        public string ErrorMessage { get; private set; } = "";
+        public T? Data { get; private set; }
+
+        public HubResponse<T> SetSuccessResponse(T data)
+        {
+            Data = data;
+            return this;
+        }
+
+        public HubResponse<T> SetErrorResponse(string message)
+        {
+            IsSucceed = false;
+            ErrorMessage = message;
+            return this;
+        }
+    }
+
+    public class HubResponseProgressData
+    {
+        public int Steps { get; set; }
+
+        public int CurrentStep { get; set; }
+    }
+
     public class AppResponse<T>
     {
         public bool IsSucceed { get; private set; } = true;

@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Application.Interfaces
 {
-    public interface ICommunicationHub
+    public interface IUserService
     {
-        public Task SendDocumentStatus(string connectionId, string documentId, HubResponse<HubResponseProgressData> status);
+        Task<Guid?> GetUserId();
+        string? GetUserName();
     }
 }

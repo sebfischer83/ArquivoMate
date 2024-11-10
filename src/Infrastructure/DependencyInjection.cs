@@ -78,15 +78,24 @@ namespace ArquivoMate.Infrastructure
             // polly
             services.AddHttpClient("ocrmypdf", client =>
             {
-                client.BaseAddress = new Uri("http://localhost:5000");
+                client.BaseAddress = new Uri(configuration["DocumentProcessors:OcrMyPdf-Server"]);
+            });
+            services.AddHttpClient("tesseract", client =>
+            {
+                client.BaseAddress = new Uri(configuration["DocumentProcessors:Tesseract-Server"]);
+            });
+            services.AddHttpClient("gotenberg", client =>
+            {
+                client.BaseAddress = new Uri(configuration["Gotenberg:OcrMyPdf-Server"]);
             });
 
             // signalR
             services.AddSignalR().AddJsonProtocol();
 
-
             // services
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
+            services.AddHttpContextAccessor();
+            services.AddScoped<IUserService, UserDataService>();
 
             // authentication
             var appSettings = configuration.GetSection("TokenSettings").Get<TokenSettings>() ?? default!;

@@ -15,6 +15,7 @@ namespace ArquivoMate.Application.CommandHandlers.Document
 
         async Task IRequestHandler<ProcessDocumentCommand>.Handle(ProcessDocumentCommand request, CancellationToken cancellationToken)
         {
+            await documentProcessor.ProcessDocument(request);
         }
     }
 }
