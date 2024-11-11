@@ -3,10 +3,6 @@ volumes:
     driver: local
   rabbitlog:
     driver: local
-  upload:
-    driver: local
-  working:
-    driver: local
   sql:
     driver: local
   pgadmin:
@@ -33,7 +29,6 @@ services:
     image: masstransit/rabbitmq:3.13.1
     container_name: 'rabbitmq'
     ports:
-        - 5672:5672
         - 15672:15672
     volumes:
         - rabbitdata:/var/lib/rabbitmq/
@@ -42,23 +37,14 @@ services:
   ocrmypdf-server:
     image: sebfischer83/ocrmypdf-server:latest
     container_name: 'ocrmypdfserver'
-    ports:
-        - 10100:8080
-    volumes:
-      - upload:/var/upload
-      - working:/var/working
   
   tesseract-server:
     image: hertzg/tesseract-server:latest
     container_name: "tesseractserver"
-    ports:
-      - 10101:8884
   
   gotenberg-server:
     image: gotenberg/gotenberg:8
     container_name: gotenbergserver
-    ports:
-      - 10102:3000
 
   db:
     image: postgres:16.1
@@ -67,8 +53,6 @@ services:
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=lF18xggsdf4325d3z0mmN
-    ports:
-      - 5012:5432
     volumes:
       - sql:/var/lib/postgresql/data
 
@@ -94,5 +78,4 @@ services:
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
     ports:
-     - 6379:6379
      - 13333:8001

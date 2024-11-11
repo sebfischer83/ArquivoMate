@@ -2,6 +2,7 @@
 using ArquivoMate.Application.Interfaces;
 using ArquivoMate.Infrastructure.Data;
 using ArquivoMate.Infrastructure.Identity;
+using ArquivoMate.Infrastructure.Services.Communication;
 using ArquivoMate.Infrastructure.Services.Consumer;
 using ArquivoMate.Infrastructure.Services.Document;
 using ArquivoMate.Infrastructure.Services.Files;
@@ -84,10 +85,10 @@ namespace ArquivoMate.Infrastructure
             {
                 client.BaseAddress = new Uri(configuration["DocumentProcessors:Tesseract-Server"]);
             });
-            services.AddHttpClient("gotenberg", client =>
-            {
-                client.BaseAddress = new Uri(configuration["Gotenberg:OcrMyPdf-Server"]);
-            });
+            //services.AddHttpClient("gotenberg", client =>
+            //{
+            //    client.BaseAddress = new Uri(configuration["Gotenberg:OcrMyPdf-Server"]);
+            //});
 
             // signalR
             services.AddSignalR().AddJsonProtocol();
@@ -96,6 +97,7 @@ namespace ArquivoMate.Infrastructure
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
             services.AddHttpContextAccessor();
             services.AddScoped<IUserService, UserDataService>();
+            services.AddScoped<ICommunicationHub, SignalRCommunicationHub>();
 
             // authentication
             var appSettings = configuration.GetSection("TokenSettings").Get<TokenSettings>() ?? default!;

@@ -37,9 +37,6 @@ namespace ArquivoMate.WebApi.Controllers
             Path.ChangeExtension(tempPath, Path.GetExtension(file.FileName));
             System.IO.File.WriteAllBytes(tempPath, fileBytes);
 
-            tempPath = Path.Combine("/var/storage", "test.png");
-            System.IO.File.WriteAllBytes(tempPath, fileBytes);
-
             EnqueueDocumentCommand command = new EnqueueDocumentCommand
             {
                 DocumentId = documentId,

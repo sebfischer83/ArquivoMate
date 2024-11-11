@@ -13,6 +13,8 @@ namespace ArquivoMate.Domain.Common
     /// <typeparam name="T">The type of the entity's identifier.</typeparam>
     public class BaseAuditableEntity<T> : BaseEntity<T>
     {
+        public Guid Owner { get; set; }
+
         /// <summary>
         /// Gets or sets the date and time when the entity was created.
         /// </summary>
@@ -34,4 +36,5 @@ namespace ArquivoMate.Domain.Common
         public string? LastModifiedBy { get; set; }
 
     }
+
 }
