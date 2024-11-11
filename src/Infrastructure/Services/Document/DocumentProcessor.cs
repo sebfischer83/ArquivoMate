@@ -90,6 +90,12 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
         private async Task ProcessPdfDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
         {
+            // create thumbnail from pdf
+            // get text from pdf
+            // save original file
+            // save thumbnail
+            // save converted pdf
+            // save data to database
             throw new NotImplementedException();
         }
 
