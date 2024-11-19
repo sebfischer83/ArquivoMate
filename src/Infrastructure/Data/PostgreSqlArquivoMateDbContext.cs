@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Data
 {
-    public class PostgreSqlArquivoMateDbContext(IConfiguration configuration, IUserService userService) : ArquivoMateDbContext(userService)
+    public class PostgreSqlArquivoMateDbContext(IConfiguration configuration, Lazy<IUserService> userService) : ArquivoMateDbContext(userService)
     {
         private readonly IConfiguration configuration = configuration;
 
@@ -77,7 +77,7 @@ namespace ArquivoMate.Infrastructure.Data
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(configurationDictionary.ToArray())
                 .Build();
 
-            return new PostgreSqlArquivoMateDbContext(configuration);
+            return new PostgreSqlArquivoMateDbContext(configuration, null);
         }
     }
 }

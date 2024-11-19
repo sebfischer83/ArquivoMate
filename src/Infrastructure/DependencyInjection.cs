@@ -97,6 +97,7 @@ namespace ArquivoMate.Infrastructure
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
             services.AddHttpContextAccessor();
             services.AddScoped<IUserService, UserDataService>();
+            services.AddScoped<Lazy<IUserService>>(provider => new Lazy<IUserService>(() => provider.GetRequiredService<IUserService>()));
             services.AddScoped<ICommunicationHub, SignalRCommunicationHub>();
 
             // authentication

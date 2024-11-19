@@ -25,9 +25,9 @@ namespace ArquivoMate.Infrastructure.Data
 
     public class ArquivoMateDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
     {
-        protected readonly IUserService userService;
+        protected readonly Lazy<IUserService> userService;
 
-        public ArquivoMateDbContext(IUserService userService)
+        public ArquivoMateDbContext(Lazy<IUserService> userService)
         {
             this.userService = userService;
         }
@@ -58,14 +58,14 @@ namespace ArquivoMate.Infrastructure.Data
             {
                 if ((entry.State is EntityState.Added) && (entry.Entity.GetType().IsSubclassOfGeneric(typeof(BaseAuditableEntity<>))))
                 {
-                    entry.Property("Owner").CurrentValue = userService.GetUserId() ?? Guid.Empty;
+                    entry.Property("Owner").CurrentValue = userService.Value.GetUserId() ?? Guid.Empty;
                     entry.Property("LastModified").CurrentValue = DateTime.UtcNow;
-                    entry.Property("LastModifiedBy").CurrentValue = userService.GetUserName();
+                    entry.Property("LastModifiedBy").CurrentValue = userService.Value.GetUserName();
 
                     if (entry.State == EntityState.Added)
                     {
                         entry.Property("Created").CurrentValue = DateTime.UtcNow;
-                        entry.Property("CreatedBy").CurrentValue = userService.GetUserName();
+                        entry.Property("CreatedBy").CurrentValue = userService.Value.GetUserName();
                     }
                 }
 
@@ -91,7 +91,7 @@ namespace ArquivoMate.Infrastructure.Data
                 }
             }
 
-            Expression<Func<BaseAuditableEntity<Guid>, bool>> filterExpressionTenant = async (entity) => entity.Owner == await userService.GetUserId();
+            Expression<Func<BaseAuditableEntity<Guid>, bool>> filterExpressionTenant =  (entity) => entity.Owner == userService.Value.GetUserId();
             entities = GetEntities<BaseAuditableEntity<Guid>>(builder);
             ApplySingleFilter(entities, filterExpressionTenant, builder);
             ApplyIndex(entities, nameof(BaseAuditableEntity<Guid>.Owner), builder, (index) => { });

@@ -1,0 +1,20 @@
+###
+# @name session
+POST {{baseUrl}}/api/User/Login HTTP/1.1
+Content-Type: application/json
+
+{
+  "userName": "admin",
+  "email": "admin@example.com",
+  "password": "Admin1234%%"
+}
+
+{{
+  // post request script
+    const responseBody = JSON.parse(response.body);
+    console.log(responseBody);
+}}
+
+# @ref session
+POST {{baseUrl}}/api/User/Login/{{session.data.accessToken}} HTTP/1.1
+Content-Type: application/json
