@@ -8,7 +8,7 @@ namespace ArquivoMate.Application.Interfaces
 {
     public interface IUserService
     {
-        Task<Guid?> GetUserId();
+        Guid? GetUserId();
         string? GetUserName();
     }
 }

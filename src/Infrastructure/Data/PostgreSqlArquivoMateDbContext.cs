@@ -1,4 +1,5 @@
-﻿using ArquivoMate.Domain.Entities;
+﻿using ArquivoMate.Application.Interfaces;
+using ArquivoMate.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Data
 {
-    public class PostgreSqlArquivoMateDbContext(IConfiguration configuration) : ArquivoMateDbContext
+    public class PostgreSqlArquivoMateDbContext(IConfiguration configuration, IUserService userService) : ArquivoMateDbContext(userService)
     {
         private readonly IConfiguration configuration = configuration;
 
@@ -22,17 +23,44 @@ namespace ArquivoMate.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(builder);
             builder.HasPostgresExtension("pg_trgm");
             builder.HasPostgresExtension("intarray");
+            base.OnModelCreating(builder);
 
+            builder.Entity<Document>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FilePath).IsRequired();
+                entity.Property(e => e.OriginalFileName).HasMaxLength(250);
+                entity.Property(e => e.OriginalFilePath).HasMaxLength(2000);
+                entity.Property(e => e.FileExtension).HasMaxLength(20);
+                entity.Property(e => e.FileSize);
+                entity.Property(e => e.ThumbnailImage).HasMaxLength(2000);
+                entity.Property(e => e.FullImage).HasMaxLength(2000);
+                entity.Property(e => e.PreviewFile).HasMaxLength(1000);
+                entity.Property(e => e.Content);
+                entity.Property(e => e.GeneratedContent);
+                entity.Property(e => e.Comment).HasMaxLength(1000);
+                entity.Property(e => e.DocumentDate);
+                entity.HasMany(e => e.Tags).WithMany(t => t.Documents).UsingEntity<TagDocument>();
+                entity.HasMany(e => e.Versions).WithOne(v => v.Document);
+            });
 
-            //builder.Entity<Document>()
-            //.HasMany(e => e.Tags)
-            //.WithMany(e => e.Documents)
-            //.UsingEntity<DocumenTag>(
-            //    l => l.HasOne<Tag>(e => e.Tag).WithMany(e => e.DocumenTags),
-            //    r => r.HasOne<Document>(e => e.Document).WithMany(e => e.DocumentTags));
+            builder.Entity<Tag>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+                entity.HasMany(e => e.Documents).WithMany(d => d.Tags).UsingEntity<TagDocument>();
+            });
+
+            builder.Entity<DocumentVersion>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.OriginalFilePath).HasMaxLength(2000).IsRequired();
+                entity.HasOne(e => e.Document).WithMany(d => d.Versions).HasForeignKey(e => e.DocumentId);
+            });
+
+            ApplyGlobalFilters(builder);
         }
     }
 

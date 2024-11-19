@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,20 +23,20 @@ namespace ArquivoMate.Infrastructure.Identity
             this.userManager = userManager;
         }
 
-        public async Task<Guid?> GetUserId()
+        public Guid? GetUserId()
         {
             var user = _httpContextAccessor.HttpContext?.User;
             if (user == null)
             {
                 return null;
             }
-            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = user.FindFirst("Id")?.Value;
             if (userIdClaim == null)
             {
                 return null;
             }
-            var appUser = await userManager.FindByIdAsync(userIdClaim);
-            return appUser?.Id;
+
+            return Guid.Parse(userIdClaim);
         }
 
 

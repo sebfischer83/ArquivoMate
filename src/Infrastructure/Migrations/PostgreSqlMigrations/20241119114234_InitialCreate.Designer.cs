@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArquivoMate.Infrastructure.Migrations.PostgreSqlMigrations
 {
     [DbContext(typeof(PostgreSqlArquivoMateDbContext))]
-    [Migration("20241109121301_InitialCreate")]
+    [Migration("20241119114234_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

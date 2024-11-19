@@ -12,6 +12,8 @@ namespace ArquivoMate.Domain.Entities
     {
         public required string FilePath { get; set; }
 
+        public string OriginalFileName { get; set; } = null!;
+
         public string OriginalFilePath { get; set; } = null!;
 
         public string FileExtension { get; set; } = null!;
@@ -33,7 +35,7 @@ namespace ArquivoMate.Domain.Entities
 
         public string? Comment { get; set; }
 
-        public DateTime DocumentTime { get; set; }
+        public DateTime DocumentDate { get; set; }
 
         public ICollection<Tag> Tags { get; } = [];
 
