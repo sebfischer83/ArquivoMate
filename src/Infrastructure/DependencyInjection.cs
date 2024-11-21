@@ -99,6 +99,7 @@ namespace ArquivoMate.Infrastructure
             services.AddScoped<IUserService, UserDataService>();
             services.AddScoped<Lazy<IUserService>>(provider => new Lazy<IUserService>(() => provider.GetRequiredService<IUserService>()));
             services.AddScoped<ICommunicationHub, SignalRCommunicationHub>();
+            services.AddScoped<IFileService, FileService>();
 
             // authentication
             var appSettings = configuration.GetSection("TokenSettings").Get<TokenSettings>() ?? default!;

@@ -3,6 +3,7 @@ using ArquivoMate.Application;
 using ArquivoMate.Application.Commands.Document;
 using ArquivoMate.Application.Interfaces;
 using ArquivoMate.Infrastructure.Data;
+using ArquivoMate.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
@@ -19,22 +20,23 @@ namespace ArquivoMate.Infrastructure.Services.Document
 {
     public class DocumentProcessor : IDocumentProcessor
     {
-
         private readonly ILogger<DocumentProcessor> logger;
         private readonly ArquivoMateDbContext dbContext;
         private readonly ICommunicationHub communicationHub;
         private readonly IUserService userService;
         private readonly IHttpClientFactory httpClientFactory;
+        private readonly IFileService fileService;
 
         public DocumentProcessor(ILogger<DocumentProcessor> logger,
             ArquivoMateDbContext dbContext, ICommunicationHub communicationHub, IUserService userService,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory, IFileService fileService)
         {
             this.logger = logger;
             this.dbContext = dbContext;
             this.communicationHub = communicationHub;
             this.userService = userService;
             this.httpClientFactory = httpClientFactory;
+            this.fileService = fileService;
         }
 
         public async Task ProcessDocument(ProcessDocumentCommand processDocumentCommand)
@@ -55,6 +57,8 @@ namespace ArquivoMate.Infrastructure.Services.Document
             // dateitypen bestimmen
             var fileType = Path.GetExtension(processDocumentCommand.DocumentName).ToLower();
 
+            DocumentProcessorConvertStepResult convertStepResult = null;
+
             if (DocumentProcessorVariables.ImageExtensions.Contains(fileType))
             {
                 await ProcessImageAsync(processDocumentCommand, fileData);
@@ -69,33 +73,49 @@ namespace ArquivoMate.Infrastructure.Services.Document
             }
             else if (fileType == ".pdf")
             {
-                await ProcessPdfDocumentAsync(processDocumentCommand, fileData);
+                convertStepResult = await ProcessPdfDocumentAsync(processDocumentCommand, fileData);
             }
             else
             {
                 logger.LogError($"Unsupported file type: {fileType}");
-                var message = new HubResponse<HubResponseProgressData>();
+                var message = new Shared.HubResponse<HubResponseProgressData>();
                 message.SetErrorResponse("Unsupported file type");
                ///* await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCo*/mmand.DocumentId.ToString(), message);
             }
+
+            if (convertStepResult == null || !convertStepResult.IsSuccess)
+            {
+
+            }
         }
 
-        private async Task ProcessPdfDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
+        private async Task<DocumentProcessorConvertStepResult> 
+            ProcessPdfDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
         {
             // create image from pdf
             var orgImagePng = GeneratePdfImage(fileData);
             // create thumbnail
             var thumbnailWebp = GenerateThumbnail(orgImagePng);
             // get text from pdf
-            await OcrPdf(fileData);
+            var responseOcr = await OcrPdf(fileData);
 
-            // save original file
-            // save thumbnail
-            // save converted pdf
-            // save data to database
+            if (orgImagePng == null || thumbnailWebp == null || responseOcr == null) 
+            {
+                logger.LogError("Error processing pdf file");
+                return new DocumentProcessorConvertStepResult() { IsSuccess = false };
+            }
+
+            return new DocumentProcessorConvertStepResult() 
+            {
+                IsSuccess = true,
+                Image = orgImagePng,
+                Thumbnail = thumbnailWebp,
+                Content = responseOcr.Content,
+                GeneratedPdf = responseOcr.GeneratedPdf
+            };
         }
 
-        private async Task OcrPdf(byte[] fileData)
+        private async Task<OcrPdfResponse?> OcrPdf(byte[] fileData)
         {
             using var client = httpClientFactory.CreateClient("ocrmypdf");
             using var form = new MultipartFormDataContent();
@@ -108,14 +128,15 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
             if (response.IsSuccessStatusCode)
             {
-                Console.WriteLine("File uploaded successfully!");
                 var jsonString = await response.Content.ReadAsStringAsync();
                 var responseObject = JsonSerializer.Deserialize<OcrPdfResponse>(jsonString);
+                return responseObject;
             }
             else
             {
                 Console.WriteLine("File upload failed!");
             }
+            return null;
         }   
 
         private byte[] GenerateThumbnail(byte[] orgImageBytes)
@@ -201,5 +222,14 @@ namespace ArquivoMate.Infrastructure.Services.Document
             }
             return b;
         }
+    }
+
+    internal class DocumentProcessorConvertStepResult
+    {
+        public bool IsSuccess { get; set; }
+        public byte[]? Image { get; set; }
+        public byte[]? Thumbnail { get; set; }
+        public string? Content { get; set; }
+        public byte[]? GeneratedPdf { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using ArquivoMate.Application;
 using ArquivoMate.Application.Interfaces;
+using ArquivoMate.Shared;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System;

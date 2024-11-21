@@ -1,4 +1,6 @@
 ﻿using ArquivoMate.Application.Commands.Document;
+using ArquivoMate.Shared;
+using ArquivoMate.Shared.Document;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +22,7 @@ namespace ArquivoMate.WebApi.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(AppResponse<AddFileResponse>), StatusCodes.Status201Created)]
         public async Task<IActionResult> AddFile(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -32,10 +35,12 @@ namespace ArquivoMate.WebApi.Controllers
                 fileBytes = memoryStream.ToArray();
             }
 
+            logger.LogDebug($"Addfile called with {file.FileName} {file.Length} {file.ContentType}");
             var documentId = Guid.NewGuid();
             var tempPath = Path.Combine(Path.GetTempPath(), documentId.ToString());
             Path.ChangeExtension(tempPath, Path.GetExtension(file.FileName));
             System.IO.File.WriteAllBytes(tempPath, fileBytes);
+            logger.LogDebug($"Temp file created at {tempPath}");
 
             EnqueueDocumentCommand command = new EnqueueDocumentCommand
             {
@@ -46,13 +51,9 @@ namespace ArquivoMate.WebApi.Controllers
 
             await mediator.Send(command);
 
-            return Ok(command.DocumentId);
-        }
+            var result = new AppResponse<AddFileResponse>().SetSuccessResponse(new AddFileResponse { TaskId = command.DocumentId });
 
-        [HttpGet("GetStatus")]
-        public void GetStatus(Guid id)
-        {
-
+            return Ok(result);
         }
     }
 }
