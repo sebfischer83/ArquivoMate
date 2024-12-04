@@ -3,6 +3,7 @@ using ArquivoMate.Application;
 using ArquivoMate.Application.Commands.Document;
 using ArquivoMate.Application.Interfaces;
 using ArquivoMate.Infrastructure.Data;
+using ArquivoMate.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
@@ -19,22 +20,23 @@ namespace ArquivoMate.Infrastructure.Services.Document
 {
     public class DocumentProcessor : IDocumentProcessor
     {
-
         private readonly ILogger<DocumentProcessor> logger;
         private readonly ArquivoMateDbContext dbContext;
         private readonly ICommunicationHub communicationHub;
         private readonly IUserService userService;
         private readonly IHttpClientFactory httpClientFactory;
+        private readonly IFileService fileService;
 
         public DocumentProcessor(ILogger<DocumentProcessor> logger,
             ArquivoMateDbContext dbContext, ICommunicationHub communicationHub, IUserService userService,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory, IFileService fileService)
         {
             this.logger = logger;
             this.dbContext = dbContext;
             this.communicationHub = communicationHub;
             this.userService = userService;
             this.httpClientFactory = httpClientFactory;
+            this.fileService = fileService;
         }
 
         public async Task ProcessDocument(ProcessDocumentCommand processDocumentCommand)
@@ -82,6 +84,8 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
         private async Task ProcessPdfDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
         {
+            await fileService.WriteAsync($"data/twst/nez/pdf.pdf", "application/pdf", fileData);
+
             // create image from pdf
             var orgImagePng = GeneratePdfImage(fileData);
             // create thumbnail

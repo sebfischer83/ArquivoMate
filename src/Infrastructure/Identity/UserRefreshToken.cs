@@ -1,4 +1,5 @@
 ﻿using ArquivoMate.Application;
+using ArquivoMate.Shared;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -7,17 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Identity
-{
-    public class UserRefreshTokenRequest
-    {
-        public string AccessToken { get; set; } = "";
-        public string RefreshToken { get; set; } = "";
-    }
-    public class UserRefreshTokenResponse
-    {
-        public string AccessToken { get; set; } = "";
-        public string RefreshToken { get; set; } = "";
-    }
+{  
     public partial class UserService
     {
         public async Task<AppResponse<UserRefreshTokenResponse>> UserRefreshTokenAsync(UserRefreshTokenRequest request)

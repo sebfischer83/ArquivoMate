@@ -1,4 +1,5 @@
 ﻿using ArquivoMate.Infrastructure.Data;
+using ArquivoMate.Shared;
 using Microsoft.AspNetCore.Identity;
 using StackExchange.Redis;
 using System;

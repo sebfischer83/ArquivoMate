@@ -10,11 +10,13 @@
     <DockerServiceName>webapi</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="src\**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
-    <None Include="src\Domain\Entities\TagDocument.cs" />
   </ItemGroup>
 </Project>

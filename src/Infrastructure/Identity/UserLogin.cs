@@ -1,5 +1,7 @@
 ﻿using ArquivoMate.Application;
+using ArquivoMate.Shared;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,20 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Identity
-{
-    public class UserLoginRequest
-    {
-        public string UserName { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Password { get; set; } = "";
-    }
-    public class UserLoginResponse
-    {
-        public string AccessToken { get; set; } = "";
-        public DateTime AccessTokenValid { get; set; } = DateTime.Now;
-        public string RefreshToken { get; set; } = "";
-        public DateTime RefreshTokenValid { get; set; } = DateTime.Now;
-    }
+{   
     public partial class UserService
     {
         public async Task<AppResponse<UserLoginResponse>> UserLoginAsync(UserLoginRequest request)
