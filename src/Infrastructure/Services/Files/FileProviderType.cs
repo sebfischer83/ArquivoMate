@@ -12,7 +12,8 @@ namespace ArquivoMate.Infrastructure.Services.Files
         Local,
         S3,
         NFS,
-        AzureBlob
+        AzureBlob,
+        Bunny
     }
 
     public class FileProviderSettings
@@ -24,6 +25,17 @@ namespace ArquivoMate.Infrastructure.Services.Files
     {
         public string Path { get; set; }
         public string RequestPath { get; set; }
+    }
+
+    public class BunnyFileProviderSettings : FileProviderSettings
+    {
+        public string StorageZoneName { get; set; }
+
+        public string AccessKey { get; set; }
+
+        public string TokenSecurityKey { get; set; }
+
+        public string CdnHostName { get; set; }
     }
 
     public class NfsFileProviderSettings : FileProviderSettings

@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ArquivoMate.Domain.Common
+﻿namespace ArquivoMate.Domain.Common
 {
-    
-    ////<summary>
+
+    /// <summary>
     /// Represents a base auditable entity with common audit fields.
     /// </summary>
     /// <typeparam name="T">The type of the entity's identifier.</typeparam>
     public class BaseAuditableEntity<T> : BaseEntity<T>
     {
+        /// <summary>
+        /// Gets or sets the owner of the entity.
+        /// </summary>
         public Guid Owner { get; set; }
 
         /// <summary>

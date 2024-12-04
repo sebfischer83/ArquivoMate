@@ -11,18 +11,23 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Services.Communication
 {
-    public class SignalRCommunicationHub : Hub, ICommunicationHub
+    public class SignalRCommunicationHub : Hub
     {
         private readonly ILogger<SignalRCommunicationHub> logger;
+    }
 
-        public SignalRCommunicationHub(ILogger<SignalRCommunicationHub> logger)
+    public class SignalRCommunicationService : ICommunicationHub
+    {
+        private readonly IHubContext<SignalRCommunicationHub> hubContext;
+
+        public SignalRCommunicationService(IHubContext<SignalRCommunicationHub> hubContext)
         {
-            this.logger = logger;
+            this.hubContext = hubContext;
         }
 
         public async Task SendDocumentStatus(string connectionId, string documentId, HubResponse<HubResponseProgressData> status)
         {
-            await Clients.All.SendAsync("DocumentStatus", documentId, status);
+            await hubContext.Clients.All.SendAsync("DocumentStatus", documentId, status);
         }
     }
 }

@@ -32,13 +32,13 @@ namespace ArquivoMate.Infrastructure.Data
             this.userService = userService;
         }
 
-        public DbSet<Domain.Entities.Document> Documents { get; set; }
+        public DbSet<Domain.Entities.Document> Documents { get; set; } = null!;
 
-        public DbSet<Tag> Tags { get; set; }
+        public DbSet<Tag> Tags { get; set; } = null!;
 
-        public DbSet<TagDocument> DocumenTags { get; set; }
+        public DbSet<TagDocument> DocumenTags { get; set; } = null!;
 
-        public DbSet<DocumentVersion> DocumentVersions { get; set; }
+        public DbSet<DocumentVersion> DocumentVersions { get; set; } = null!; 
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -91,7 +91,7 @@ namespace ArquivoMate.Infrastructure.Data
                 }
             }
 
-            Expression<Func<BaseAuditableEntity<Guid>, bool>> filterExpressionTenant =  (entity) => entity.Owner == userService.Value.GetUserId();
+            Expression<Func<BaseAuditableEntity<Guid>, bool>> filterExpressionTenant = (entity) => entity.Owner == userService.Value.GetUserId();
             entities = GetEntities<BaseAuditableEntity<Guid>>(builder);
             ApplySingleFilter(entities, filterExpressionTenant, builder);
             ApplyIndex(entities, nameof(BaseAuditableEntity<Guid>.Owner), builder, (index) => { });

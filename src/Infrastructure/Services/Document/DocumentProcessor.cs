@@ -41,70 +41,107 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
         public async Task ProcessDocument(ProcessDocumentCommand processDocumentCommand)
         {
-            logger.LogDebug(processDocumentCommand.ToString());
+            logger.LogInformation($"Start processing {processDocumentCommand.ToString()}");
             string filePath = processDocumentCommand.DocumentPath;
             if (!File.Exists(filePath))
             {
                 logger.LogError($"File not found: {filePath}");
                 var message = new HubResponse<HubResponseProgressData>();
                 message.SetErrorResponse("File not found");
-                //await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
+                await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
 
                 return;
             }
-            byte[] fileData = System.IO.File.ReadAllBytes(filePath);
+            byte[] fileData = File.ReadAllBytes(filePath);
+            logger.LogDebug($"Processing {filePath} with size {fileData.Length} bytes");
 
             // dateitypen bestimmen
             var fileType = Path.GetExtension(processDocumentCommand.DocumentName).ToLower();
+            logger.LogDebug($"Found file type {fileType}");
 
+            DocumentProcessorConvertStepResult? convertStepResult = null;
+            await ConvertDocument(processDocumentCommand.DocumentId, fileData, fileType, convertStepResult);
+
+            logger.LogInformation($"Completed converting step with result {convertStepResult}");
+
+            if (convertStepResult == null || !convertStepResult.IsSuccess)
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+                logger.LogError($"Convert of file was not succesfull {filePath} {processDocumentCommand.DocumentId}");
+                var message = new HubResponse<HubResponseProgressData>();
+                message.SetErrorResponse("Error while converting file");
+                await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
+                return;
+            }
+
+            var userId = userService.GetUserId();
+            var recordId = Guid.NewGuid();
+
+            logger.LogInformation($"Identity for new document will be {recordId} for user {userId}");
+
+        }
+
+        private async Task ConvertDocument(Guid documentId, byte[] fileData, string fileType, DocumentProcessorConvertStepResult? convertStepResult)
+        {
             if (DocumentProcessorVariables.ImageExtensions.Contains(fileType))
             {
-                await ProcessImageAsync(processDocumentCommand, fileData);
+                await ProcessImageAsync(fileData);
             }
             else if (DocumentProcessorVariables.OfficeExtensions.Contains(fileType))
             {
-                await ProcessOfficeDocumentAsync(processDocumentCommand, fileData);
+                await ProcessOfficeDocumentAsync(fileData);
             }
             else if (DocumentProcessorVariables.TextExtensions.Contains(fileType))
             {
-                await ProcessTextDocumentAsync(processDocumentCommand, fileData);
+                await ProcessTextDocumentAsync(fileData);
             }
             else if (fileType == ".pdf")
             {
-                await ProcessPdfDocumentAsync(processDocumentCommand, fileData);
+                convertStepResult = await ProcessPdfDocumentAsync(fileData);
             }
             else
             {
                 logger.LogError($"Unsupported file type: {fileType}");
                 var message = new HubResponse<HubResponseProgressData>();
                 message.SetErrorResponse("Unsupported file type");
-               ///* await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCo*/mmand.DocumentId.ToString(), message);
+                await communicationHub.SendDocumentStatus(userService.GetUserName()!, documentId.ToString(), message);
             }
         }
 
-        private async Task ProcessPdfDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
+        private async Task<DocumentProcessorConvertStepResult>
+            ProcessPdfDocumentAsync(byte[] fileData)
         {
-            await fileService.WriteAsync($"data/twst/nez/pdf.pdf", "application/pdf", fileData);
-
+            logger.LogInformation("Processing pdf file");
             // create image from pdf
             var orgImagePng = GeneratePdfImage(fileData);
             // create thumbnail
             var thumbnailWebp = GenerateThumbnail(orgImagePng);
             // get text from pdf
-            await OcrPdf(fileData);
+            var responseOcr = await OcrPdf(fileData);
 
-            // save original file
-            // save thumbnail
-            // save converted pdf
-            // save data to database
+            if (orgImagePng == null || thumbnailWebp == null || responseOcr == null)
+            {
+                logger.LogError("Error processing pdf file");
+                return new DocumentProcessorConvertStepResult() { IsSuccess = false };
+            }
+
+            return new DocumentProcessorConvertStepResult()
+            {
+                IsSuccess = true,
+                Image = orgImagePng,
+                Thumbnail = thumbnailWebp,
+                Content = responseOcr.Content,
+                GeneratedPdf = responseOcr.GeneratedPdf
+            };
         }
 
-        private async Task OcrPdf(byte[] fileData)
+        private async Task<OcrPdfResponse?> OcrPdf(byte[] fileData)
         {
             using var client = httpClientFactory.CreateClient("ocrmypdf");
             using var form = new MultipartFormDataContent();
             using var fileContent = new StreamContent(new MemoryStream(fileData));
-            
+
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
             form.Add(fileContent, "file", "file.pdf");
 
@@ -112,15 +149,16 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
             if (response.IsSuccessStatusCode)
             {
-                Console.WriteLine("File uploaded successfully!");
                 var jsonString = await response.Content.ReadAsStringAsync();
                 var responseObject = JsonSerializer.Deserialize<OcrPdfResponse>(jsonString);
+                return responseObject;
             }
             else
             {
                 Console.WriteLine("File upload failed!");
             }
-        }   
+            return null;
+        }
 
         private byte[] GenerateThumbnail(byte[] orgImageBytes)
         {
@@ -138,20 +176,20 @@ namespace ArquivoMate.Infrastructure.Services.Document
             using MemoryStream memoryStream = new MemoryStream();
             thumbnail.SaveAsWebp(memoryStream);
 
-            return memoryStream.ToArray();  
+            return memoryStream.ToArray();
         }
 
-        private async Task ProcessTextDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
+        private async Task ProcessTextDocumentAsync(byte[] fileData)
         {
             throw new NotImplementedException();
         }
 
-        private async Task ProcessOfficeDocumentAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
+        private async Task ProcessOfficeDocumentAsync(byte[] fileData)
         {
             throw new NotImplementedException();
         }
 
-        private async Task ProcessImageAsync(ProcessDocumentCommand processDocumentCommand, byte[] fileData)
+        private async Task ProcessImageAsync(byte[] fileData)
         {
             throw new NotImplementedException();
         }
@@ -160,6 +198,8 @@ namespace ArquivoMate.Infrastructure.Services.Document
         {
             string pathOrgFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".pdf");
             string pathImageFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+            logger.LogDebug($"Convert pdf to image, pdf {pathOrgFile} to image {pathImageFile}");
 
             File.WriteAllBytes(pathOrgFile, fileData);
 
@@ -172,6 +212,8 @@ namespace ArquivoMate.Infrastructure.Services.Document
             startInfo.RedirectStandardError = true;
             startInfo.UseShellExecute = false;
             startInfo.CreateNoWindow = true;
+            logger.LogDebug($"Execute console with {startInfo.FileName} {startInfo.Arguments}");
+
             using (Process process = new Process())
             {
                 process.StartInfo = startInfo;
@@ -193,7 +235,21 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
             }
             pathImageFile += ".png";
+
+            if (File.Exists(pathImageFile))
+            {
+                logger.LogDebug($"Image file created {pathImageFile}");
+            }
+            else
+            {
+                logger.LogError($"Error creating image file {pathImageFile}");
+                return [];
+             }
+
             var b = File.ReadAllBytes(pathImageFile);
+
+            logger.LogDebug($"Image file size {b.Length}");
+
             try
             {
                 File.Delete(pathOrgFile);
@@ -204,6 +260,19 @@ namespace ArquivoMate.Infrastructure.Services.Document
                 logger.LogError(ex, "Error deleting temp files");
             }
             return b;
+        }
+    }
+
+    internal class DocumentProcessorConvertStepResult
+    {
+        public bool IsSuccess { get; set; }
+        public byte[]? Image { get; set; }
+        public byte[]? Thumbnail { get; set; }
+        public string? Content { get; set; }
+        public byte[]? GeneratedPdf { get; set; }
+                public override string ToString()
+        {
+            return $"IsSuccess: {IsSuccess}, Image: {Image?.Length}, Thumbnail: {Thumbnail?.Length}, Content: {Content?.Length}, GeneratedPdf: {GeneratedPdf?.Length}";
         }
     }
 }
