@@ -3,7 +3,7 @@ using ArquivoMate.Infrastructure;
 using ArquivoMate.Infrastructure.Data;
 using ArquivoMate.Infrastructure.Identity;
 using ArquivoMate.Infrastructure.Services.Communication;
-using ArquivoMate.Infrastructure.Services.Files;
+using ArquivoMate.Infrastructure.Settings.FileProvider;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

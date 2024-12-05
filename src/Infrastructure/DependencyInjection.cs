@@ -7,6 +7,8 @@ using ArquivoMate.Infrastructure.Services.Consumer;
 using ArquivoMate.Infrastructure.Services.Document;
 using ArquivoMate.Infrastructure.Services.Files;
 using ArquivoMate.Infrastructure.Services.MessageQueue;
+using ArquivoMate.Infrastructure.Settings.DeliveryProvider;
+using ArquivoMate.Infrastructure.Settings.FileProvider;
 using Blobject.AmazonS3;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -28,7 +30,10 @@ namespace ArquivoMate.Infrastructure
         {
             // file provider
             services.AddSingleton<FileProviderSettingsFactory>();
-                       
+
+            // delivery provider
+            services.AddSingleton<DeliveryProviderSettingsFactory>();
+
             // ef core
             DatabaseConfigurations databaseConfigurations = new DatabaseConfigurations();
             configuration.GetSection("Database").Bind(databaseConfigurations);

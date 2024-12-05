@@ -1,4 +1,5 @@
 ﻿using ArquivoMate.Application.Interfaces;
+using ArquivoMate.Infrastructure.Settings.FileProvider;
 using Blobject.Core;
 using Blobject.Disk;
 using BunnyCDN.Net.Storage;
@@ -48,7 +49,7 @@ namespace ArquivoMate.Infrastructure.Services.Files
                 case FileProviderType.Bunny:
                     var bunnySettings = settings as BunnyFileProviderSettings ?? throw new InvalidOperationException("Invalid settings type for Bunny file provider");
                     fileProviderType = InternalFileProviderType.Bunny;
-                    bunnyCDNStorage = new BunnyCDNStorage(bunnySettings.StorageZoneName, bunnySettings.TokenSecurityKey, "de");
+                    bunnyCDNStorage = new BunnyCDNStorage(bunnySettings.StorageZoneName, bunnySettings.AccessKey, "de");
                     break;
                 default:
                     throw new InvalidOperationException("Invalid file provider type");

@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Services.Document
 {
-    public class DocumentProcessor : IDocumentProcessor
+    public partial class DocumentProcessor : IDocumentProcessor
     {
         private readonly ILogger<DocumentProcessor> logger;
         private readonly ArquivoMateDbContext dbContext;
@@ -59,8 +59,7 @@ namespace ArquivoMate.Infrastructure.Services.Document
             var fileType = Path.GetExtension(processDocumentCommand.DocumentName).ToLower();
             logger.LogDebug($"Found file type {fileType}");
 
-            DocumentProcessorConvertStepResult? convertStepResult = null;
-            await ConvertDocument(processDocumentCommand.DocumentId, fileData, fileType, convertStepResult);
+            DocumentProcessorConvertStepResult? convertStepResult = await ConvertDocument(processDocumentCommand.DocumentId, fileData, fileType);
 
             logger.LogInformation($"Completed converting step with result {convertStepResult}");
 
@@ -76,13 +75,44 @@ namespace ArquivoMate.Infrastructure.Services.Document
             }
 
             var userId = userService.GetUserId();
+            if (userId == null)
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+                logger.LogError("User not found");
+                var message = new HubResponse<HubResponseProgressData>();
+                message.SetErrorResponse("User not found");
+                await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
+                return;
+            }
             var recordId = Guid.NewGuid();
 
             logger.LogInformation($"Identity for new document will be {recordId} for user {userId}");
 
+            var paths = GeneratePaths(userId.Value, recordId, processDocumentCommand.DocumentName);
+
+            WriteFiles(paths, convertStepResult, fileData);
         }
 
-        private async Task ConvertDocument(Guid documentId, byte[] fileData, string fileType, DocumentProcessorConvertStepResult? convertStepResult)
+        private void WriteFiles(DocumentPaths paths, DocumentProcessorConvertStepResult convertStepResult, byte[] orgFileData)
+        {
+            fileService.WriteAsync(paths.OriginalPath, MimeTypes.GetMimeType(paths.OriginalPath), orgFileData);
+            fileService.WriteAsync(paths.ImagePath, MimeTypes.GetMimeType(paths.ImagePath), convertStepResult.Image!);
+            fileService.WriteAsync(paths.ThumbnailPath, MimeTypes.GetMimeType(paths.ThumbnailPath), convertStepResult.Thumbnail!);
+            fileService.WriteAsync(paths.GeneratedPdf, MimeTypes.GetMimeType(paths.GeneratedPdf), convertStepResult.GeneratedPdf!);
+        }
+
+        private DocumentPaths GeneratePaths(Guid userId, Guid recordId, string originalName)
+        {
+            string originalPath = Path.Combine(userId.ToString(), recordId.ToString(), "original", originalName);
+            string generatedPdf = Path.Combine(userId.ToString(), recordId.ToString(), recordId.ToString() + ".pdf");
+            string thumbnailPath = Path.Combine(userId.ToString(), recordId.ToString(), recordId.ToString() + "-thumb" + ".webp");
+            string imagePath = Path.Combine(userId.ToString(), recordId.ToString(), recordId.ToString() + ".png");
+
+            return new DocumentPaths(originalPath, generatedPdf, thumbnailPath, imagePath);
+        }
+
+        private async Task<DocumentProcessorConvertStepResult?> ConvertDocument(Guid documentId, byte[] fileData, string fileType)
         {
             if (DocumentProcessorVariables.ImageExtensions.Contains(fileType))
             {
@@ -98,7 +128,7 @@ namespace ArquivoMate.Infrastructure.Services.Document
             }
             else if (fileType == ".pdf")
             {
-                convertStepResult = await ProcessPdfDocumentAsync(fileData);
+                return await ProcessPdfDocumentAsync(fileData);
             }
             else
             {
@@ -107,6 +137,8 @@ namespace ArquivoMate.Infrastructure.Services.Document
                 message.SetErrorResponse("Unsupported file type");
                 await communicationHub.SendDocumentStatus(userService.GetUserName()!, documentId.ToString(), message);
             }
+
+            return null;
         }
 
         private async Task<DocumentProcessorConvertStepResult>
@@ -149,8 +181,13 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
             if (response.IsSuccessStatusCode)
             {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
                 var jsonString = await response.Content.ReadAsStringAsync();
-                var responseObject = JsonSerializer.Deserialize<OcrPdfResponse>(jsonString);
+                var responseObject = JsonSerializer.Deserialize<OcrPdfResponse>(jsonString, options);
                 return responseObject;
             }
             else

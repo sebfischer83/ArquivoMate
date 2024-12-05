@@ -17,7 +17,7 @@ namespace ArquivoMate.Infrastructure.Migrations.PostgreSqlMigrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "intarray");
@@ -98,6 +98,8 @@ namespace ArquivoMate.Infrastructure.Migrations.PostgreSqlMigrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Owner");
+
                     b.ToTable("Documents");
                 });
 
@@ -133,6 +135,8 @@ namespace ArquivoMate.Infrastructure.Migrations.PostgreSqlMigrations
                     b.HasKey("Id");
 
                     b.HasIndex("DocumentId");
+
+                    b.HasIndex("Owner");
 
                     b.ToTable("DocumentVersions");
                 });

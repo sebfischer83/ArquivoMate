@@ -1,11 +1,6 @@
 ﻿using ArquivoMate.Application.Commands.Document;
 using MassTransit;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Services.Consumer
 {
@@ -22,6 +17,7 @@ namespace ArquivoMate.Infrastructure.Services.Consumer
         {
             var command = new ProcessDocumentCommand(context.Message);
             await _mediator.Send(command);
+            
         }
     }
 }
