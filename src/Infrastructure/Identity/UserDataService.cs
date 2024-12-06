@@ -14,13 +14,10 @@ namespace ArquivoMate.Infrastructure.Identity
     public class UserDataService : IUserService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly UserManager<ApplicationUser> userManager;
 
-        public UserDataService(IHttpContextAccessor httpContextAccessor,
-            UserManager<ApplicationUser> userManager)
+        public UserDataService(IHttpContextAccessor httpContextAccessor)
         {
             _httpContextAccessor = httpContextAccessor;
-            this.userManager = userManager;
         }
 
         public Guid? GetUserId()
@@ -48,7 +45,7 @@ namespace ArquivoMate.Infrastructure.Identity
                 return null; // Kein Benutzer authentifiziert
             }
 
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = user.FindFirst("UserName")?.Value;
             return userId;
         }
     }

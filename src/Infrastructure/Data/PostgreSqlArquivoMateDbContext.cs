@@ -1,5 +1,6 @@
 ﻿using ArquivoMate.Application.Interfaces;
 using ArquivoMate.Domain.Entities;
+using ArquivoMate.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace ArquivoMate.Infrastructure.Data
 {
-    public class PostgreSqlArquivoMateDbContext(IConfiguration configuration, Lazy<IUserService> userService) : ArquivoMateDbContext(userService)
+    public class PostgreSqlArquivoMateDbContext(IConfiguration configuration, IUserService userService) : ArquivoMateDbContext(userService)
     {
         private readonly IConfiguration configuration = configuration;
 
@@ -30,7 +31,6 @@ namespace ArquivoMate.Infrastructure.Data
             builder.Entity<Document>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.FilePath).IsRequired();
                 entity.Property(e => e.OriginalFileName).HasMaxLength(250);
                 entity.Property(e => e.OriginalFilePath).HasMaxLength(2000);
                 entity.Property(e => e.FileExtension).HasMaxLength(20);
@@ -77,7 +77,7 @@ namespace ArquivoMate.Infrastructure.Data
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(configurationDictionary.ToArray())
                 .Build();
 
-            return new PostgreSqlArquivoMateDbContext(configuration, null);
+            return new PostgreSqlArquivoMateDbContext(configuration, new UserDataService(null));
         }
     }
 }

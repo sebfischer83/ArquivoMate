@@ -60,7 +60,6 @@ namespace ArquivoMate.Infrastructure.Migrations.PostgreSqlMigrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    FilePath = table.Column<string>(type: "text", nullable: false),
                     OriginalFileName = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
                     OriginalFilePath = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
                     FileExtension = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -71,7 +70,7 @@ namespace ArquivoMate.Infrastructure.Migrations.PostgreSqlMigrations
                     Content = table.Column<string>(type: "text", nullable: false),
                     GeneratedContent = table.Column<string>(type: "text", nullable: true),
                     Comment = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    DocumentDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DocumentDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Owner = table.Column<Guid>(type: "uuid", nullable: false),
                     Created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),

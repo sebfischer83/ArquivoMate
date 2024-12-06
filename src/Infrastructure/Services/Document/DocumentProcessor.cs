@@ -23,22 +23,29 @@ namespace ArquivoMate.Infrastructure.Services.Document
         private readonly ILogger<DocumentProcessor> logger;
         private readonly ArquivoMateDbContext dbContext;
         private readonly ICommunicationHub communicationHub;
-        private readonly IUserService userService;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IFileService fileService;
 
         public DocumentProcessor(ILogger<DocumentProcessor> logger,
-            ArquivoMateDbContext dbContext, ICommunicationHub communicationHub, IUserService userService,
+            ArquivoMateDbContext dbContext, ICommunicationHub communicationHub,
             IHttpClientFactory httpClientFactory, IFileService fileService)
         {
             this.logger = logger;
             this.dbContext = dbContext;
             this.communicationHub = communicationHub;
-            this.userService = userService;
             this.httpClientFactory = httpClientFactory;
             this.fileService = fileService;
         }
 
+        /// <summary>
+        /// Process a document
+        /// Steps:
+        /// - Convert documents
+        /// - Save to storage
+        /// - Save to database
+        /// </summary>
+        /// <param name="processDocumentCommand"></param>
+        /// <returns></returns>
         public async Task ProcessDocument(ProcessDocumentCommand processDocumentCommand)
         {
             logger.LogInformation($"Start processing {processDocumentCommand.ToString()}");
@@ -46,14 +53,17 @@ namespace ArquivoMate.Infrastructure.Services.Document
             if (!File.Exists(filePath))
             {
                 logger.LogError($"File not found: {filePath}");
-                var message = new HubResponse<HubResponseProgressData>();
+                var message = new HubResponse<DocumentProcessingFinishedData>();
                 message.SetErrorResponse("File not found");
-                await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
+                await communicationHub.SendDocumentStatus(processDocumentCommand.UserId.ToString(), processDocumentCommand.DocumentId.ToString(), message);
 
                 return;
             }
             byte[] fileData = File.ReadAllBytes(filePath);
             logger.LogDebug($"Processing {filePath} with size {fileData.Length} bytes");
+
+            // delete temporary file
+            File.Delete(filePath);
 
             // dateitypen bestimmen
             var fileType = Path.GetExtension(processDocumentCommand.DocumentName).ToLower();
@@ -65,33 +75,53 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
             if (convertStepResult == null || !convertStepResult.IsSuccess)
             {
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
                 logger.LogError($"Convert of file was not succesfull {filePath} {processDocumentCommand.DocumentId}");
-                var message = new HubResponse<HubResponseProgressData>();
+                var message = new HubResponse<DocumentProcessingFinishedData>();
                 message.SetErrorResponse("Error while converting file");
-                await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
+                await communicationHub.SendDocumentStatus(processDocumentCommand.UserId.ToString(), processDocumentCommand.DocumentId.ToString(), message);
                 return;
             }
 
-            var userId = userService.GetUserId();
-            if (userId == null)
-            {
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
-                logger.LogError("User not found");
-                var message = new HubResponse<HubResponseProgressData>();
-                message.SetErrorResponse("User not found");
-                await communicationHub.SendDocumentStatus(userService.GetUserName()!, processDocumentCommand.DocumentId.ToString(), message);
-                return;
-            }
             var recordId = Guid.NewGuid();
 
-            logger.LogInformation($"Identity for new document will be {recordId} for user {userId}");
+            logger.LogInformation($"Identity for new document will be {recordId} for user {processDocumentCommand.UserId}");
+                                   
+            var paths = GeneratePaths(processDocumentCommand.UserId, recordId, processDocumentCommand.DocumentName);
 
-            var paths = GeneratePaths(userId.Value, recordId, processDocumentCommand.DocumentName);
+            try
+            {
+                WriteFiles(paths, convertStepResult, fileData);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error writing files");
+                var message = new HubResponse<DocumentProcessingFinishedData>();
+                message.SetErrorResponse("Error writing files");
+                await communicationHub.SendDocumentStatus(processDocumentCommand.UserId.ToString(), processDocumentCommand.DocumentId.ToString(), message);
+                return;
+            }
 
-            WriteFiles(paths, convertStepResult, fileData);
+            // save to db
+            dbContext.SetUser(processDocumentCommand.UserId, processDocumentCommand.UserName);
+            var document = new Domain.Entities.Document
+            {
+                Id = recordId,
+                Content = convertStepResult.Content ?? string.Empty,
+                OriginalFilePath = paths.OriginalPath,
+                OriginalFileName = processDocumentCommand.DocumentName,
+                FileExtension = Path.GetExtension(processDocumentCommand.DocumentName),
+                FileSize = fileData.Length,
+                ThumbnailImage = paths.ThumbnailPath,
+                FullImage = paths.ImagePath,
+                PreviewFile = paths.GeneratedPdf
+            };
+            dbContext.Documents.Add(document);
+            await dbContext.SaveChangesAsync();
+            {
+                var message = new HubResponse<DocumentProcessingFinishedData>();
+                message.SetSuccessResponse(new DocumentProcessingFinishedData());
+                await communicationHub.SendDocumentStatus(processDocumentCommand.UserId.ToString(), processDocumentCommand.DocumentId.ToString(), message);
+            }
         }
 
         private void WriteFiles(DocumentPaths paths, DocumentProcessorConvertStepResult convertStepResult, byte[] orgFileData)
@@ -104,10 +134,13 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
         private DocumentPaths GeneratePaths(Guid userId, Guid recordId, string originalName)
         {
-            string originalPath = Path.Combine(userId.ToString(), recordId.ToString(), "original", originalName);
-            string generatedPdf = Path.Combine(userId.ToString(), recordId.ToString(), recordId.ToString() + ".pdf");
-            string thumbnailPath = Path.Combine(userId.ToString(), recordId.ToString(), recordId.ToString() + "-thumb" + ".webp");
-            string imagePath = Path.Combine(userId.ToString(), recordId.ToString(), recordId.ToString() + ".png");
+            // must be a service
+            var prefix = fileService.GetPrefix();
+
+            string originalPath = Path.Combine(prefix, userId.ToString(), recordId.ToString(), "original", originalName);
+            string generatedPdf = Path.Combine(prefix, userId.ToString(), recordId.ToString(), recordId.ToString() + ".pdf");
+            string thumbnailPath = Path.Combine(prefix, userId.ToString(), recordId.ToString(), recordId.ToString() + "-thumb" + ".webp");
+            string imagePath = Path.Combine(prefix,userId.ToString(), recordId.ToString(), recordId.ToString() + ".png");
 
             return new DocumentPaths(originalPath, generatedPdf, thumbnailPath, imagePath);
         }
@@ -133,9 +166,9 @@ namespace ArquivoMate.Infrastructure.Services.Document
             else
             {
                 logger.LogError($"Unsupported file type: {fileType}");
-                var message = new HubResponse<HubResponseProgressData>();
+                var message = new HubResponse<DocumentProcessingFinishedData>();
                 message.SetErrorResponse("Unsupported file type");
-                await communicationHub.SendDocumentStatus(userService.GetUserName()!, documentId.ToString(), message);
+                await communicationHub.SendDocumentStatus("", documentId.ToString(), message);
             }
 
             return null;

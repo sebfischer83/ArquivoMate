@@ -3,6 +3,7 @@ using ArquivoMate.Domain.Common;
 using ArquivoMate.Domain.Entities;
 using ArquivoMate.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -25,12 +26,19 @@ namespace ArquivoMate.Infrastructure.Data
 
     public class ArquivoMateDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
     {
-        protected readonly Lazy<IUserService> userService;
+        private readonly IUserService userService;
 
-        public ArquivoMateDbContext(Lazy<IUserService> userService)
+#pragma warning disable CS8618 
+        public ArquivoMateDbContext(IUserService userService)
+#pragma warning restore CS8618
         {
             this.userService = userService;
+            SetUser(this.userService.GetUserId() ?? Guid.Empty, this.userService.GetUserName() ?? string.Empty);
         }
+
+        public Guid UserId { get; set; }
+
+        public string UserName { get; set; }
 
         public DbSet<Domain.Entities.Document> Documents { get; set; } = null!;
 
@@ -46,6 +54,12 @@ namespace ArquivoMate.Infrastructure.Data
 
         }
 
+        public void SetUser(Guid userId, string userName)
+        {
+            UserId = userId;
+            UserName = userName;
+        }
+
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             HandleChanges();
@@ -58,14 +72,14 @@ namespace ArquivoMate.Infrastructure.Data
             {
                 if ((entry.State is EntityState.Added) && (entry.Entity.GetType().IsSubclassOfGeneric(typeof(BaseAuditableEntity<>))))
                 {
-                    entry.Property("Owner").CurrentValue = userService.Value.GetUserId() ?? Guid.Empty;
-                    entry.Property("LastModified").CurrentValue = DateTime.UtcNow;
-                    entry.Property("LastModifiedBy").CurrentValue = userService.Value.GetUserName();
+                    entry.Property("Owner").CurrentValue = UserId;
+                    entry.Property("LastModified").CurrentValue = DateTimeOffset.UtcNow;
+                    entry.Property("LastModifiedBy").CurrentValue = UserName;
 
                     if (entry.State == EntityState.Added)
                     {
-                        entry.Property("Created").CurrentValue = DateTime.UtcNow;
-                        entry.Property("CreatedBy").CurrentValue = userService.Value.GetUserName();
+                        entry.Property("Created").CurrentValue = DateTimeOffset.UtcNow;
+                        entry.Property("CreatedBy").CurrentValue = UserName;
                     }
                 }
 
@@ -91,7 +105,7 @@ namespace ArquivoMate.Infrastructure.Data
                 }
             }
 
-            Expression<Func<BaseAuditableEntity<Guid>, bool>> filterExpressionTenant = (entity) => entity.Owner == userService.Value.GetUserId();
+            Expression<Func<BaseAuditableEntity<Guid>, bool>> filterExpressionTenant = (entity) => entity.Owner == UserId;
             entities = GetEntities<BaseAuditableEntity<Guid>>(builder);
             ApplySingleFilter(entities, filterExpressionTenant, builder);
             ApplyIndex(entities, nameof(BaseAuditableEntity<Guid>.Owner), builder, (index) => { });

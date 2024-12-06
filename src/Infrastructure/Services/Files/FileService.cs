@@ -16,6 +16,7 @@ namespace ArquivoMate.Infrastructure.Services.Files
     {
         private readonly FileProviderSettingsFactory settingsFactory;
         private readonly ILogger<FileService> logger;
+        private readonly FileProviderSettings settings;
         private readonly BlobClientBase? blobClient;
         private readonly BunnyCDNStorage? bunnyCDNStorage;
 
@@ -25,7 +26,7 @@ namespace ArquivoMate.Infrastructure.Services.Files
         {
             this.settingsFactory = settingsFactory ?? throw new ArgumentNullException(nameof(settingsFactory));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            var settings = settingsFactory.GetFileProviderSettings() ?? throw new InvalidOperationException("File provider settings cannot be null");
+            this.settings = settingsFactory.GetFileProviderSettings() ?? throw new InvalidOperationException("File provider settings cannot be null");
             switch (settings.Type)
             {
                 case FileProviderType.Local:
@@ -61,19 +62,37 @@ namespace ArquivoMate.Infrastructure.Services.Files
             }
         }
 
+        public bool NeedPrefix => fileProviderType == InternalFileProviderType.Bunny ? true : false;
 
-
-        public async Task WriteAsync(string path, string contentType, byte[] content)
+        public string GetPrefix()
         {
             if (fileProviderType == InternalFileProviderType.Bunny)
             {
-                await using var ms = new MemoryStream(content);
-                await bunnyCDNStorage!.UploadAsync(ms, path);
+                return (settings as BunnyFileProviderSettings)!.StorageZoneName;
             }
-            else if (fileProviderType == InternalFileProviderType.Blobject)
+            return string.Empty;
+        }
+
+        public async Task WriteAsync(string path, string contentType, byte[] content)
+        {
+            try
             {
-                await blobClient!.WriteAsync(path, contentType, content);
+                if (fileProviderType == InternalFileProviderType.Bunny)
+                {
+                    await using var ms = new MemoryStream(content);
+                    await bunnyCDNStorage!.UploadAsync(ms, path);
+                }
+                else if (fileProviderType == InternalFileProviderType.Blobject)
+                {
+                    await blobClient!.WriteAsync(path, contentType, content);
+                }
             }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error writing file");
+                throw;
+            }
+           
         }
     }
 

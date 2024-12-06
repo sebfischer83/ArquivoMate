@@ -25,7 +25,7 @@ namespace ArquivoMate.Infrastructure.Services.Communication
             this.hubContext = hubContext;
         }
 
-        public async Task SendDocumentStatus(string connectionId, string documentId, HubResponse<HubResponseProgressData> status)
+        public async Task SendDocumentStatus(string connectionId, string documentId, HubResponse<DocumentProcessingFinishedData> status)
         {
             await hubContext.Clients.All.SendAsync("DocumentStatus", documentId, status);
         }
