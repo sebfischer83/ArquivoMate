@@ -14,5 +14,8 @@ namespace ArquivoMate.Application.Commands.Document
         public string DocumentName { get; set; }
 
         public string DocumentPath { get; set; }
+
+        public Guid UserId { get; set; }
+        public string UserName { get; set; }
     }
 }

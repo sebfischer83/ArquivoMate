@@ -17,8 +17,6 @@ services:
     image: ${DOCKER_REGISTRY-}webapi
     environment:
         - ASPNETCORE_ENVIRONMENT=Development
-        - AMate__FileProvider__Type=local
-        - AMate__FileProvider__Path=/var/storage
     volumes:
         - "//c/Data/Files:/var/storage:rw"
     build:

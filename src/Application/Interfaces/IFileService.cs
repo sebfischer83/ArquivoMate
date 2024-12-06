@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 namespace ArquivoMate.Application.Interfaces
 {
     public interface IFileService
-    {        Task WriteAsync(string path, string contentType, byte[] content);
+    {
+        bool NeedPrefix { get; }
+        string GetPrefix();
+        Task WriteAsync(string path, string contentType, byte[] content);
     }
 }

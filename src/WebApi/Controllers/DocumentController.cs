@@ -1,4 +1,5 @@
 ﻿using ArquivoMate.Application.Commands.Document;
+using ArquivoMate.Application.Interfaces;
 using ArquivoMate.Shared;
 using ArquivoMate.Shared.Document;
 using MediatR;
@@ -14,11 +15,13 @@ namespace ArquivoMate.WebApi.Controllers
     {
         private readonly ILogger<DocumentController> logger;
         private readonly IMediator mediator;
+        private readonly IUserService userService;
 
-        public DocumentController(ILogger<DocumentController> logger, IMediator mediator)
+        public DocumentController(ILogger<DocumentController> logger, IMediator mediator, IUserService userService)
         {
             this.logger = logger;
             this.mediator = mediator;
+            this.userService = userService;
         }
 
         [HttpPost]
@@ -46,7 +49,9 @@ namespace ArquivoMate.WebApi.Controllers
             {
                 DocumentId = documentId,
                 DocumentName = file.FileName,
-                DocumentPath = tempPath
+                DocumentPath = tempPath,
+                UserId = userService.GetUserId()!.Value,
+                UserName = userService.GetUserName()!
             };
 
             await mediator.Send(command);

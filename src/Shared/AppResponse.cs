@@ -27,11 +27,9 @@ namespace ArquivoMate.Shared
         }
     }
 
-    public class HubResponseProgressData
+    public class DocumentProcessingFinishedData
     {
-        public int Steps { get; set; }
-
-        public int CurrentStep { get; set; }
+        public string Message { get; set; }
     }
 
     public class AppResponse<T>

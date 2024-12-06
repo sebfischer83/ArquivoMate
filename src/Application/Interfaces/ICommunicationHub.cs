@@ -9,6 +9,6 @@ namespace ArquivoMate.Application.Interfaces
 {
     public interface ICommunicationHub
     {
-        public Task SendDocumentStatus(string connectionId, string documentId, HubResponse<HubResponseProgressData> status);
+        public Task SendDocumentStatus(string connectionId, string documentId, HubResponse<DocumentProcessingFinishedData> status);
     }
 }
