@@ -64,6 +64,7 @@ namespace ArquivoMate.Infrastructure.Services.Document
 
             // delete temporary file
             File.Delete(filePath);
+            logger.LogDebug($"Temporary file {filePath} deleted");
 
             // dateitypen bestimmen
             var fileType = Path.GetExtension(processDocumentCommand.DocumentName).ToLower();
@@ -83,14 +84,13 @@ namespace ArquivoMate.Infrastructure.Services.Document
             }
 
             var recordId = Guid.NewGuid();
-
             logger.LogInformation($"Identity for new document will be {recordId} for user {processDocumentCommand.UserId}");
                                    
             var paths = GeneratePaths(processDocumentCommand.UserId, recordId, processDocumentCommand.DocumentName);
 
             try
             {
-                WriteFiles(paths, convertStepResult, fileData);
+                await WriteFilesAsync(paths, convertStepResult, fileData);
             }
             catch (Exception ex)
             {
@@ -124,12 +124,12 @@ namespace ArquivoMate.Infrastructure.Services.Document
             }
         }
 
-        private void WriteFiles(DocumentPaths paths, DocumentProcessorConvertStepResult convertStepResult, byte[] orgFileData)
+        private async Task WriteFilesAsync(DocumentPaths paths, DocumentProcessorConvertStepResult convertStepResult, byte[] orgFileData)
         {
-            fileService.WriteAsync(paths.OriginalPath, MimeTypes.GetMimeType(paths.OriginalPath), orgFileData);
-            fileService.WriteAsync(paths.ImagePath, MimeTypes.GetMimeType(paths.ImagePath), convertStepResult.Image!);
-            fileService.WriteAsync(paths.ThumbnailPath, MimeTypes.GetMimeType(paths.ThumbnailPath), convertStepResult.Thumbnail!);
-            fileService.WriteAsync(paths.GeneratedPdf, MimeTypes.GetMimeType(paths.GeneratedPdf), convertStepResult.GeneratedPdf!);
+            await fileService.WriteAsync(paths.OriginalPath, MimeTypes.GetMimeType(paths.OriginalPath), orgFileData);
+            await fileService.WriteAsync(paths.ImagePath, MimeTypes.GetMimeType(paths.ImagePath), convertStepResult.Image!);
+            await fileService.WriteAsync(paths.ThumbnailPath, MimeTypes.GetMimeType(paths.ThumbnailPath), convertStepResult.Thumbnail!);
+            await fileService.WriteAsync(paths.GeneratedPdf, MimeTypes.GetMimeType(paths.GeneratedPdf), convertStepResult.GeneratedPdf!);
         }
 
         private DocumentPaths GeneratePaths(Guid userId, Guid recordId, string originalName)

@@ -26,7 +26,7 @@ namespace ArquivoMate.WebApi.Controllers
 
         [HttpPost]
         [ProducesResponseType(typeof(AppResponse<AddFileResponse>), StatusCodes.Status201Created)]
-        public async Task<IActionResult> AddFile(IFormFile file)
+        public async Task<IActionResult> AddDocument(IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded");

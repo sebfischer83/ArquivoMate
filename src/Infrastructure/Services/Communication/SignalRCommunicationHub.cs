@@ -14,6 +14,29 @@ namespace ArquivoMate.Infrastructure.Services.Communication
     public class SignalRCommunicationHub : Hub
     {
         private readonly ILogger<SignalRCommunicationHub> logger;
+
+        public SignalRCommunicationHub(ILogger<SignalRCommunicationHub> logger)
+        {
+            this.logger = logger;
+        }
+
+        public override Task OnConnectedAsync()
+        {
+            logger.LogDebug("Client connected: {0}", Context.ConnectionId);
+            return base.OnConnectedAsync();
+        }
+
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            if (exception != null)
+            {
+                logger.LogError(exception, "Client disconnected with exception: {0}", Context.ConnectionId);
+            }
+            else
+                logger.LogDebug("Client disconnected: {0}", Context.ConnectionId);
+
+            return base.OnDisconnectedAsync(exception);
+        }
     }
 
     public class SignalRCommunicationService : ICommunicationHub

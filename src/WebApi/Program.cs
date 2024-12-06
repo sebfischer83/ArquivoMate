@@ -93,7 +93,7 @@ namespace ArquivoMate.WebApi
             }
 
             app.MapControllers();
-            app.MapHub<SignalRCommunicationHub>("/documentStatus", opt =>
+            app.MapHub<SignalRCommunicationHub>("/status", opt =>
             {
                 opt.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
                     Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
